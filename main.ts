@@ -179,16 +179,16 @@ console.log(`bindChainB(${n1}, add1, multiplyBy2, divideBy3, divideBy2) = ${bind
 
 /**
  * Example C: Logger Monad
- * 0. Raw Type: T2
- * 1. Wrapped Type: loggedValue interface which is {log: string, value: T2}
- * 2. WrapperFunction: (T1 => T2) -> ( T1 => { log: string, value: T2})
- * 3. TransformFunction: transform1(f: T1 => T2): T1 => { log: string, value: T2}
- * 4. bindC(WrappedType, transform1): WrappedType
- * 5. bindChainC(WrappedType, ...allTransformFunctions: Array<f: TransformFunction>): WrappedType
+ * 0. Raw Type: T
+ * 1. Wrapped Type: loggedValue<T> interface which is {log: string, value: T}
+ * 2. WrapperFunction: T => loggedValue<T>
+ * 3. TransformFunction: transform1(x: T) => loggedValue<T>
+ * 4. bindC(loggedValue<T>, transform1): loggedValue<T>
+ * 5. bindChainC(loggedValue<T>, ...allTransformFunctions: Array<(T => loggedValue<T>)>): loggedValue<T>
  */
 
-interface loggedValue<T2> {
-    value: T2,
+interface loggedValue<T> {
+    value: T,
     log: string
 }
 
@@ -213,21 +213,20 @@ function transform2(x: string): loggedValue<string> {
     }
 }
 
-function transform3 (x: string): loggedValue<string> {
+function transform3(x: string): loggedValue<string> {
     return {
         log: `${x} a leading 9 is added`,
         value: Number.parseFloat('9' + x).toString()
     }
 }
 
-function bindC<T1, T2>(a: loggedValue<T1>, f: ((x: T1) => loggedValue<T2>)) {
+function bindC<T>(a: loggedValue<T>, f: ((x: T) => loggedValue<T>)) {
     return {
         value: f(a.value).value,
         log: a.log.concat(f(a.value).log).concat(" \n ")
-    } as loggedValue<T2>;
+    } as loggedValue<T>;
 }
 
-// T1 and T2 must be same. Used T instead of them.
 function bindChainC<T>(a: loggedValue<T>, ...allTransformFunctions: Array<((x: T) => loggedValue<T>)>) {
     let ret = a;
 
@@ -235,7 +234,7 @@ function bindChainC<T>(a: loggedValue<T>, ...allTransformFunctions: Array<((x: T
         ret = {
             value: currentTransformFunction(ret.value).value,
             log: ret.log.concat(currentTransformFunction(ret.value).log).concat(" \n ")
-        }; 
+        };
     }
 
     return ret;
