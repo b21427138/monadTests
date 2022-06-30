@@ -12,12 +12,12 @@
  *  2. WrapperFunction: T -> Wrapped<T>
  *  3. TransformFunction: T -> Wrapped<T>
  *  4. bind(Wrapped<T>, TransformFunction): Wrapped<T>
- *  5. bind2(Wrapped<T>, t1: TransformFunction, t2: TransformFunction, t3, ...): Wrapped<T>
+ *  5. bindChain(Wrapped<T>, t1: TransformFunction, t2: TransformFunction, t3, ...): Wrapped<T>
  *      all transform functions are taken as parameters and all of them are applied one by one
  * 
  * Monad Example 1: List<T>.
- * Monad Example 2: Logger<T>
- * Monad Example 3: Optional<T>
+ * Monad Example 2: Optional<T>
+ * Monad Example 3: Logger<T>
  * Monad Example 4: Promise<T>
  */
 
@@ -48,6 +48,20 @@ function bindA(startArray: Array<string>, transformFunction: ((s: string) => Arr
     return ret.flat();
 }
 
+function bindChainA(initialArray: Array<string>, ...allTransformFunctions: Array<((s: string) => Array<string>)>) {
+    let ret = initialArray;
+
+    // Apply all transform functions one by one
+    for (const currentTransformFunction of allTransformFunctions) {
+        ret = ret.flatMap(item => currentTransformFunction(item));
+    }
+
+    return ret;
+}
+
+
+/// TESTS ///
+
 const startArray = ["start"];
 console.log('start -> transformA1');
 console.log(bindA(startArray, transformA1));
@@ -63,16 +77,6 @@ console.log(
     )
 );
 
-function bindChainA(initialArray: Array<string>, ...allTransformFunctions: Array<((s: string) => Array<string>)>) {
-    let ret = initialArray;
-
-    // Apply all transform functions one by one
-    for (const currentTransformFunction of allTransformFunctions) {
-        ret = ret.flatMap(item => currentTransformFunction(item));
-    }
-
-    return ret;
-}
 
 console.log(`bind2A('start2', transformA1): ${bindChainA(['start2'], transformA1)}`)
 console.log(`bind2A('start2', transformA1, transformA2): ${bindChainA(['start2'], transformA1, transformA2)}`)
@@ -158,6 +162,8 @@ function bindChainB(mn: MaybeInteger, ...allTransformFunctions: Array<((n: numbe
 }
 
 
+/// TESTS ///
+
 let n1 = wrapper(8), n2 = wrapper(3.14);
 console.log(`${n1} -> add1 -> multiplyBy2 =  ${bindB(bindB(n1, add1), multiplyBy2)}`);
 console.log(`${n2} -> add1 =  ${bindB(n2, add1)}`);
@@ -207,12 +213,35 @@ function transform2(x: string): loggedValue<string> {
     }
 }
 
+function transform3 (x: string): loggedValue<string> {
+    return {
+        log: `${x} a leading 9 is added`,
+        value: Number.parseFloat('9' + x).toString()
+    }
+}
+
 function bindC<T1, T2>(a: loggedValue<T1>, f: ((x: T1) => loggedValue<T2>)) {
     return {
         value: f(a.value).value,
         log: a.log.concat(f(a.value).log).concat(" \n ")
     } as loggedValue<T2>;
 }
+
+// T1 and T2 must be same. Used T instead of them.
+function bindChainC<T>(a: loggedValue<T>, ...allTransformFunctions: Array<((x: T) => loggedValue<T>)>) {
+    let ret = a;
+
+    for (const currentTransformFunction of allTransformFunctions) {
+        ret = {
+            value: currentTransformFunction(ret.value).value,
+            log: ret.log.concat(currentTransformFunction(ret.value).log).concat(" \n ")
+        }; 
+    }
+
+    return ret;
+}
+
+/// TESTS ///
 
 console.log(wrap(987));
 console.log(transform1('555'));
@@ -222,3 +251,5 @@ console.log(bindC(wrap('12.34'), transform2));
 console.log(bindC(
     bindC(wrap('12.34'), transform2)
     , transform1));
+
+console.log(bindChainC(wrap('12.34'), transform1, transform2, transform3));

@@ -12,12 +12,12 @@
  *  2. WrapperFunction: T -> Wrapped<T>
  *  3. TransformFunction: T -> Wrapped<T>
  *  4. bind(Wrapped<T>, TransformFunction): Wrapped<T>
- *  5. bind2(Wrapped<T>, t1: TransformFunction, t2: TransformFunction, t3, ...): Wrapped<T>
+ *  5. bindChain(Wrapped<T>, t1: TransformFunction, t2: TransformFunction, t3, ...): Wrapped<T>
  *      all transform functions are taken as parameters and all of them are applied one by one
  *
  * Monad Example 1: List<T>.
- * Monad Example 2: Logger<T>
- * Monad Example 3: Optional<T>
+ * Monad Example 2: Optional<T>
+ * Monad Example 3: Logger<T>
  * Monad Example 4: Promise<T>
  */
 /**
@@ -41,11 +41,6 @@ function bindA(startArray, transformFunction) {
     var ret = startArray.map(function (str) { return transformFunction(str); });
     return ret.flat();
 }
-var startArray = ["start"];
-console.log('start -> transformA1');
-console.log(bindA(startArray, transformA1));
-console.log("start -> transformA1 -> transformA2 -> transformA3");
-console.log(bindA(bindA(bindA(startArray, transformA1), transformA2), transformA3));
 function bindChainA(initialArray) {
     var allTransformFunctions = [];
     for (var _i = 1; _i < arguments.length; _i++) {
@@ -62,6 +57,12 @@ function bindChainA(initialArray) {
     }
     return ret;
 }
+/// TESTS ///
+var startArray = ["start"];
+console.log('start -> transformA1');
+console.log(bindA(startArray, transformA1));
+console.log("start -> transformA1 -> transformA2 -> transformA3");
+console.log(bindA(bindA(bindA(startArray, transformA1), transformA2), transformA3));
 console.log("bind2A('start2', transformA1): ".concat(bindChainA(['start2'], transformA1)));
 console.log("bind2A('start2', transformA1, transformA2): ".concat(bindChainA(['start2'], transformA1, transformA2)));
 console.log("bind2A('start2', transformA1, transformA2, transformA3): ".concat(bindChainA(['start2'], transformA1, transformA2, transformA3)));
@@ -136,6 +137,7 @@ function bindChainB(mn) {
     }
     return ret;
 }
+/// TESTS ///
 var n1 = wrapper(8), n2 = wrapper(3.14);
 console.log("".concat(n1, " -> add1 -> multiplyBy2 =  ").concat(bindB(bindB(n1, add1), multiplyBy2)));
 console.log("".concat(n2, " -> add1 =  ").concat(bindB(n2, add1)));
@@ -162,14 +164,38 @@ function transform2(x) {
         value: Number.parseFloat(x).toExponential(5)
     };
 }
+function transform3(x) {
+    return {
+        log: "".concat(x, " a leading 9 is added"),
+        value: Number.parseFloat('9' + x).toString()
+    };
+}
 function bindC(a, f) {
     return {
         value: f(a.value).value,
         log: a.log.concat(f(a.value).log).concat(" \n ")
     };
 }
+// T1 and T2 must be same. Used T instead of them.
+function bindChainC(a) {
+    var allTransformFunctions = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        allTransformFunctions[_i - 1] = arguments[_i];
+    }
+    var ret = a;
+    for (var _a = 0, allTransformFunctions_3 = allTransformFunctions; _a < allTransformFunctions_3.length; _a++) {
+        var currentTransformFunction = allTransformFunctions_3[_a];
+        ret = {
+            value: currentTransformFunction(ret.value).value,
+            log: ret.log.concat(currentTransformFunction(ret.value).log).concat(" \n ")
+        };
+    }
+    return ret;
+}
+/// TESTS ///
 console.log(wrap(987));
 console.log(transform1('555'));
 console.log(bindC(wrap('12.34'), transform1));
 console.log(bindC(wrap('12.34'), transform2));
 console.log(bindC(bindC(wrap('12.34'), transform2), transform1));
+console.log(bindChainC(wrap('12.34'), transform1, transform2, transform3));
