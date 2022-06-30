@@ -36,7 +36,7 @@ function transformA2(s: string): Array<string> {
     return [s + ' 😄', s + ' 😍', s + ' 😛'];
 }
 
-function transformA3 (s: string): Array<string> {
+function transformA3(s: string): Array<string> {
     return [s + ' 🇹🇷', s + ' 🇺🇸', s + ' 🇩🇪'];
 }
 
@@ -73,31 +73,31 @@ console.log(
 
 type Maybe<T> = T | null;
 
-function wrapper ( n: number) {
+function wrapper(n: number) {
     return n as Maybe<number>;
 }
 
-function add1 (n : number): Maybe<number> {
-    if (n === null || !Number.isInteger(n)) 
+function add1(n: number): Maybe<number> {
+    if (n === null || !Number.isInteger(n))
         return null;
     return n + 1;
 }
 
-function multiplyBy2 ( n: number ): Maybe<number> {
+function multiplyBy2(n: number): Maybe<number> {
     if (n === null || !Number.isInteger(n))
         return null;
     return n * 2;
 }
 
-function divideBy2 (n: number) : Maybe<number> {
-    if (n === null || !Number.isInteger(n) || !Number.isInteger(n/2))
+function divideBy2(n: number): Maybe<number> {
+    if (n === null || !Number.isInteger(n) || !Number.isInteger(n / 2))
         return null;
     return n / 2;
 }
 
 
 
-function bindB (mn: Maybe<number>, transformFunction: ((n: number) => Maybe<number>)): Maybe<number> {
+function bindB(mn: Maybe<number>, transformFunction: ((n: number) => Maybe<number>)): Maybe<number> {
     if (mn === null)
         return null;
     return transformFunction(mn);
