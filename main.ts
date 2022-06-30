@@ -12,6 +12,8 @@
  *  2. WrapperFunction: T -> Wrapped<T>
  *  3. TransformFunction: T -> Wrapped<T>
  *  4. bind(Wrapped<T>, TransformFunction): Wrapped<T>
+ *  5. bind2(Wrapped<T>, t1: TransformFunction, t2: TransformFunction, t3, ...): Wrapped<T>
+ *      all transform functions are taken as parameters and all of them are applied one by one
  * 
  * Monad Example 1: List<T>.
  * Monad Example 2: Logger<T>
@@ -23,9 +25,9 @@
  * Example A: List as monads.
  * 0. Raw Type: String
  * 1. Wrapped Type: Array<String>
- * 2. WrapperFunction: String -> Array<String> (s: String) { return [ s: String ] } bracket notation in javascript creates list
- * 3. TransformFunction: transform1(s: String): Array<String> (s: String) { return [ s + '🍎', s + '🍏'] }
- * 4. bind(Array<String>, transform1): Array<String> (as: Array<String>, transform1) { }
+ * 2. WrapperFunction: String -> Array<String> (s: String) { return [ s ] } bracket notation in javascript creates list
+ * 3. TransformFunction: transform1(s: String): Array<String> 
+ * 4. bind(Array<String>, transform1): Array<String> 
  */
 
 function transformA1(s: string): Array<string> {
@@ -46,7 +48,7 @@ function bindA(startArray: Array<string>, transformFunction: ((s: string) => Arr
     return ret.flat();
 }
 
-let startArray = ["start"];
+const startArray = ["start"];
 console.log('start -> transformA1');
 console.log(bindA(startArray, transformA1));
 
@@ -61,52 +63,108 @@ console.log(
     )
 );
 
+function bindChainA(initialArray: Array<string>, ...allTransformFunctions: Array<((s: string) => Array<string>)>) {
+    let ret = initialArray;
+
+    // Apply all transform functions one by one
+    for (const currentTransformFunction of allTransformFunctions) {
+        ret = ret.flatMap(item => currentTransformFunction(item));
+    }
+
+    return ret;
+}
+
+console.log(`bind2A('start2', transformA1): ${bindChainA(['start2'], transformA1)}`)
+console.log(`bind2A('start2', transformA1, transformA2): ${bindChainA(['start2'], transformA1, transformA2)}`)
+console.log(`bind2A('start2', transformA1, transformA2, transformA3): ${bindChainA(['start2'], transformA1, transformA2, transformA3)}`)
+
 
 /**
  * Example B: Optional as monad.
  * 0. Raw Type: number
- * 1. Wrapped Type: Maybe<number>
- * 2. WrapperFunction: number -> Maybe<number>
- * 3. TransformFunction: transform1(s: number): Maybe<number> 
- * 4. bind(Maybe<number>, transform1): Maybe<number> 
+ * 1. Wrapped Type: MaybeInteger
+ * 2. WrapperFunction: number -> MayBeInteger
+ * 3. TransformFunction: transform1(s: number): MaybeInteger
+ * 4. bindB(Maybe<number>, transform1): MaybeInteger
+ * 5. bindChainB(MaybeInteger, ...allTransformFunctions: Array<s: number => MayBeInteger>): MaybeInteger
  */
 
-type Maybe<T> = T | null;
+class MaybeInteger {
+    constructor(n: number | undefined) {
+        if (!Number.isInteger(n)) {
+            this.isInteger = false;
+        }
+        else {
+            this.isInteger = true;
+            this.value = n as number;
+        }
+    }
 
-function wrapper(n: number) {
-    return n as Maybe<number>;
+    isInteger: boolean;
+    value?: number;
+    toString() {
+        return 'MayBeInteger of ' + this.value + ' ';
+    }
 }
 
-function add1(n: number): Maybe<number> {
-    if (n === null || !Number.isInteger(n))
-        return null;
-    return n + 1;
+function wrapper(n: number): MaybeInteger {
+    if (!Number.isInteger(n)) return new MaybeInteger(undefined);
+    return new MaybeInteger(n);
 }
 
-function multiplyBy2(n: number): Maybe<number> {
-    if (n === null || !Number.isInteger(n))
-        return null;
-    return n * 2;
+function unwrapper(n: MaybeInteger): number {
+    return n.value as number;
 }
 
-function divideBy2(n: number): Maybe<number> {
-    if (n === null || !Number.isInteger(n) || !Number.isInteger(n / 2))
-        return null;
-    return n / 2;
+function add1(n: number): MaybeInteger {
+    if (!Number.isInteger(n))
+        return new MaybeInteger(undefined);
+    return wrapper(n + 1);
+}
+
+function multiplyBy2(n: number): MaybeInteger {
+    if (!Number.isInteger(n))
+        return new MaybeInteger(undefined);
+    return wrapper(n * 2);
+}
+
+function divideBy2(n: number): MaybeInteger {
+    if (!Number.isInteger(n) || !Number.isInteger(n / 2))
+        return new MaybeInteger(undefined);
+    return wrapper(n / 2);
+}
+
+function divideBy3(n: number): MaybeInteger{
+    if (!Number.isInteger(n) || !Number.isInteger(n / 3))
+        return new MaybeInteger(undefined);
+    return wrapper(n / 3);
 }
 
 
-
-function bindB(mn: Maybe<number>, transformFunction: ((n: number) => Maybe<number>)): Maybe<number> {
-    if (mn === null)
-        return null;
-    return transformFunction(mn);
+function bindB(mn: MaybeInteger, transformFunction: ((n: number) => MaybeInteger)): MaybeInteger {
+    if (mn === undefined)
+        return new MaybeInteger(undefined);
+    return transformFunction(unwrapper(mn));
 }
 
-let n1 = 8, n2 = 1.2;
-console.log(`${n1} -> add1 =  ${bindB(n1, add1)}`);
-console.log(`${n1} -> multiplyBy2 =  ${bindB(n1, multiplyBy2)}`);
+function bindChainB(mn: MaybeInteger, ...allTransformFunctions: Array<((n: number) => MaybeInteger)>): MaybeInteger {
+    let ret = mn;
+    for (const currentTransformFunction of allTransformFunctions) {
+        if (ret === undefined)
+            return new MaybeInteger(undefined);
+        ret = currentTransformFunction(unwrapper(ret));
+    }
+    return ret;
+}
+
+
+let n1 = wrapper(8), n2 = wrapper(3.14);
 console.log(`${n1} -> add1 -> multiplyBy2 =  ${bindB(bindB(n1, add1), multiplyBy2)}`);
 console.log(`${n2} -> add1 =  ${bindB(n2, add1)}`);
 
 console.log(`${n1} -> add1 -> divideBy2 = ${bindB(bindB(n1, add1), divideBy2)}`)
+console.log(`${n1} -> add1 -> divideBy3 = ${bindB(bindB(n1, add1), divideBy3)}`)
+
+console.log(`bindChainB(${n1}, add1, multiplyBy2) = ${bindChainB(n1, add1, multiplyBy2)}`);
+console.log(`bindChainB(${n2}, add1, multiplyBy2) = ${bindChainB(n2, add1, multiplyBy2)}`);
+console.log(`bindChainB(${n1}, add1, multiplyBy2, divideBy3, divideBy2) = ${bindChainB(n1, add1, multiplyBy2, divideBy3, divideBy2)}`);
