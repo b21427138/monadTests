@@ -134,7 +134,7 @@ function divideBy2(n: number): MaybeInteger {
     return wrapper(n / 2);
 }
 
-function divideBy3(n: number): MaybeInteger{
+function divideBy3(n: number): MaybeInteger {
     if (!Number.isInteger(n) || !Number.isInteger(n / 3))
         return new MaybeInteger(undefined);
     return wrapper(n / 3);
@@ -168,3 +168,57 @@ console.log(`${n1} -> add1 -> divideBy3 = ${bindB(bindB(n1, add1), divideBy3)}`)
 console.log(`bindChainB(${n1}, add1, multiplyBy2) = ${bindChainB(n1, add1, multiplyBy2)}`);
 console.log(`bindChainB(${n2}, add1, multiplyBy2) = ${bindChainB(n2, add1, multiplyBy2)}`);
 console.log(`bindChainB(${n1}, add1, multiplyBy2, divideBy3, divideBy2) = ${bindChainB(n1, add1, multiplyBy2, divideBy3, divideBy2)}`);
+
+
+
+/**
+ * Example C: Logger Monad
+ * 0. Raw Type: T2
+ * 1. Wrapped Type: loggedValue interface which is {log: string, value: T2}
+ * 2. WrapperFunction: (T1 => T2) -> ( T1 => { log: string, value: T2})
+ * 3. TransformFunction: transform1(f: T1 => T2): T1 => { log: string, value: T2}
+ * 4. bindC(WrappedType, transform1): WrappedType
+ * 5. bindChainC(WrappedType, ...allTransformFunctions: Array<f: TransformFunction>): WrappedType
+ */
+
+interface loggedValue<T2> {
+    value: T2,
+    log: string
+}
+
+function wrap<T>(x: T) {
+    return {
+        value: x,
+        log: ""
+    }
+}
+
+function transform1(x: string): loggedValue<string> {
+    return {
+        log: `${x} toFixed(3) is used`,
+        value: Number.parseFloat(x).toFixed(3)
+    };
+}
+
+function transform2(x: string): loggedValue<string> {
+    return {
+        log: `${x} toExponential(5) is used`,
+        value: Number.parseFloat(x).toExponential(5)
+    }
+}
+
+function bindC<T1, T2>(a: loggedValue<T1>, f: ((x: T1) => loggedValue<T2>)) {
+    return {
+        value: f(a.value).value,
+        log: a.log.concat(f(a.value).log).concat(" \n ")
+    } as loggedValue<T2>;
+}
+
+console.log(wrap(987));
+console.log(transform1('555'));
+
+console.log(bindC(wrap('12.34'), transform1));
+console.log(bindC(wrap('12.34'), transform2));
+console.log(bindC(
+    bindC(wrap('12.34'), transform2)
+    , transform1));

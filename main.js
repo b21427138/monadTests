@@ -144,3 +144,32 @@ console.log("".concat(n1, " -> add1 -> divideBy3 = ").concat(bindB(bindB(n1, add
 console.log("bindChainB(".concat(n1, ", add1, multiplyBy2) = ").concat(bindChainB(n1, add1, multiplyBy2)));
 console.log("bindChainB(".concat(n2, ", add1, multiplyBy2) = ").concat(bindChainB(n2, add1, multiplyBy2)));
 console.log("bindChainB(".concat(n1, ", add1, multiplyBy2, divideBy3, divideBy2) = ").concat(bindChainB(n1, add1, multiplyBy2, divideBy3, divideBy2)));
+function wrap(x) {
+    return {
+        value: x,
+        log: ""
+    };
+}
+function transform1(x) {
+    return {
+        log: "".concat(x, " toFixed(3) is used"),
+        value: Number.parseFloat(x).toFixed(3)
+    };
+}
+function transform2(x) {
+    return {
+        log: "".concat(x, " toExponential(5) is used"),
+        value: Number.parseFloat(x).toExponential(5)
+    };
+}
+function bindC(a, f) {
+    return {
+        value: f(a.value).value,
+        log: a.log.concat(f(a.value).log).concat(" \n ")
+    };
+}
+console.log(wrap(987));
+console.log(transform1('555'));
+console.log(bindC(wrap('12.34'), transform1));
+console.log(bindC(wrap('12.34'), transform2));
+console.log(bindC(bindC(wrap('12.34'), transform2), transform1));
